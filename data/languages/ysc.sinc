@@ -1,0 +1,301 @@
+define token opbyte (16)
+   notbit = (15, 15)
+   opcode = (0, 14)
+;
+
+define token argbyte (8)
+   arg_type = (0, 7)
+;
+
+define token imm32byte (32)
+   imm32 = (0, 31)
+   sign = (31, 31)
+;
+
+define token imm8byte (8)
+   imm8 = (0, 7)
+   imm8_2 = (0, 7)
+   imm8_3 = (0, 7)
+;
+
+define token imm16byte (16)
+   imm16 = (0, 15)
+;
+
+define token imm24byte (24)
+   imm24 = (0, 23)
+;
+
+define register offset=0x4000 size=4   contextreg;
+define context contextreg
+  offset=(0,7) dec
+  current_arg=(8,15) hex
+  string_end=(16,16) dec
+  num_args=(17,24) dec
+;
+
+define register offset=0x5000 size=4   jmpoffsetreg;
+define context contextreg
+  isrel=(0,1)
+;
+
+string: imm8^string is string_end = 1 & imm8; string [string_end = imm8 | (imm8 >> 1) | (imm8 >> 2) | (imm8 >> 3) | (imm8 >> 4) | (imm8 >> 5) | (imm8 >> 6) | (imm8 >> 7);] { local tmp:4 = imm8; export tmp; }
+string: is string_end = 0   { export 0:4; }
+
+define pcodeop timera;
+define pcodeop timerb;
+
+arg_data: "TIMERA" is arg_type; current_arg = 0xB { local tmp:4 = timera(); export tmp; }
+arg_data: "TIMERB" is arg_type; current_arg = 0xC { local tmp:4 = timerb(); export tmp; }
+arg_data: imm32 is arg_type; current_arg = 0x6; imm32 { local tmp:4 = imm32; export tmp; }
+arg_data: "0" is arg_type; current_arg = 0x1 { export 0:4; }
+arg_data: "0.0" is arg_type; current_arg = 0x2 { local tmp:4 = int2float(0:4); export tmp; }
+arg_data: imm8 is arg_type; current_arg = 0x3; imm8 { local tmp:4 = imm8; tmp = tmp << 24; tmp = float2float(tmp); export tmp; }
+arg_data: imm16 is arg_type; current_arg = 0x4; imm16 { local tmp:4 = imm16; tmp = tmp << 16; tmp = float2float(tmp); export tmp; }
+arg_data: imm24 is arg_type; current_arg = 0x5; imm24 { local tmp:4 = imm24; tmp = tmp << 8; tmp = float2float(tmp); export tmp; }
+arg_data: imm8 is arg_type; current_arg = 0x7; imm8 { local tmp:4 = sext(imm8:1); export tmp; }
+arg_data: imm16 is arg_type; current_arg = 0x8; imm16 { local tmp:4 = sext(imm16:2); export tmp; }
+arg_data: imm32 is arg_type; current_arg = 0x9; imm32 { local tmp:4 = float2float(imm32:4); export tmp; }
+arg_data: "L_"local_offset is arg_type; current_arg >= 0xD & current_arg <= 0x6C [local_offset = arg_type - 0xd;] { local tmp:4 = SP - local_offset * 4; export *[ram]:4 tmp; }
+arg_data: "G_"global_offset is arg_type; current_arg >= 0xCd & current_arg <= 0xe5; imm8 [global_offset = (((arg_type - 0xcd) << 8) | imm8);] { local tmp:4 = global_offset * 4 + 8; export *:4 tmp; }
+arg_data: "G_"global_offset"["imm8_2"] size" imm8_3 is arg_type; current_arg >= 0xe6; imm8; imm8_2; imm8_3 [global_offset = (((arg_type - 0xe6) << 8) | imm8);] { local tmp:4 = (global_offset * 4) + 8; tmp = tmp + (*:4 (SP - imm8_2 * 4)) * 4; export *:4 tmp; }
+arg_data: string is arg_type; current_arg = 0xA; string [string_end = 1;] { local tmp:4 = &arg_type; export *:4 tmp; }
+arg_data: is arg_type; current_arg = 0x0 { export 0:4; }
+
+arg_ptr_data: "TIMERA" is arg_type; current_arg = 0xB { local tmp:4 = timera(); export tmp; }
+arg_ptr_data: "TIMERB" is arg_type; current_arg = 0xC { local tmp:4 = timerb(); export tmp; }
+arg_ptr_data: "L_"local_offset is arg_type; current_arg >= 0xD & current_arg <= 0x6C [local_offset = arg_type - 0xd;] { local tmp:4 = SP - local_offset * 4; export tmp; }
+arg_ptr_data: "G_"global_offset is arg_type; current_arg >= 0xCd & current_arg <= 0xe5; imm8 [global_offset = (((arg_type - 0xcd) << 8) | imm8);] { local tmp:4 = global_offset * 4 + 8; export tmp; }
+arg_ptr_data: "G_"global_offset"["imm8_2"] size" imm8_3 is arg_type; current_arg >= 0xe6; imm8; imm8_2; imm8_3 [global_offset = (((arg_type - 0xe6) << 8) | imm8);] { local tmp:4 = (global_offset * 4) + 8; tmp = tmp + (*:4 (SP - imm8_2 * 4)) * 4; export tmp; }
+
+arg: arg_data is arg_type ... & arg_data [current_arg = arg_type;] { export arg_data; }
+ptr: arg_ptr_data is arg_type ... & arg_ptr_data [current_arg = arg_type;] { export arg_ptr_data; }
+
+arg_offset_data: imm32 is arg_type; current_arg = 0x6; imm32 & sign = 0 { local tmp:4 = imm32; export tmp; }
+arg_offset_data: imm32 is arg_type; current_arg = 0x6; imm32 & sign = 1 { local tmp:4 = NO - imm32; export tmp; }
+arg_offset_data: is arg_type; current_arg = 0x0 { export 0:4; }
+off: arg_offset_data is arg_type ... & arg_offset_data [current_arg = arg_type;] { export arg_offset_data; }
+
+arg_list: arg arg_list is current_arg != 0x0; arg; arg_list {}
+arg_list: is current_arg = 0x0 {}
+
+params_list: arg params_list is num_args != 0x0; arg; params_list [num_args = num_args - 1;] {
+     SP = SP + 4;
+     *:4 SP = arg;
+}
+params_list: is num_args = 0x0 {}
+
+arg1: arg is arg { local tmp:4 = arg; export tmp; }
+arg2: arg is arg { local tmp:4 = arg; export tmp; }
+arg3: arg is arg { local tmp:4 = arg; export tmp; }
+arg4: arg is arg { local tmp:4 = arg; export tmp; }
+arg5: arg is arg { local tmp:4 = arg; export tmp; }
+arg6: arg is arg { local tmp:4 = arg; export tmp; }
+arg7: arg is arg { local tmp:4 = arg; export tmp; }
+arg8: arg is arg { local tmp:4 = arg; export tmp; }
+arg9: arg is arg { local tmp:4 = arg; export tmp; }
+arg10: arg is arg { local tmp:4 = arg; export tmp; }
+arg11: arg is arg { local tmp:4 = arg; export tmp; }
+arg12: arg is arg { local tmp:4 = arg; export tmp; }
+arg13: arg is arg { local tmp:4 = arg; export tmp; }
+arg14: arg is arg { local tmp:4 = arg; export tmp; }
+arg15: arg is arg { local tmp:4 = arg; export tmp; }
+
+ptr1: ptr is ptr { local tmp:4 = ptr; export tmp; }
+ptr2: ptr is ptr { local tmp:4 = ptr; export tmp; }
+ptr3: ptr is ptr { local tmp:4 = ptr; export tmp; }
+ptr4: ptr is ptr { local tmp:4 = ptr; export tmp; }
+ptr5: ptr is ptr { local tmp:4 = ptr; export tmp; }
+ptr6: ptr is ptr { local tmp:4 = ptr; export tmp; }
+
+not: "" is notbit = 0 { export 0:1; }
+not: "not" is notbit = 1 { export 1:1; }
+
+define pcodeop storeCondResult;
+macro setCondResult(val,not) {
+      val = (val && !not) || (!val && not);
+      # local is_and = (CC & 7) != 0;
+      # local is_or = !is_and && CC != 0;
+
+      # CF = (is_and && CF && val) || (is_or && (CF || val)) || (!is_and && !is_or && val);
+
+      # #local sub:4 = zext(CC != 0);
+      # CC = CC - zext(CC != 0);
+
+      # CF = (!CF && !is_and && val) || (CF && val) || (CF && !is_and && is_or);
+
+      if (CC == 0)
+         goto <single>;
+
+      if (CC < 9)
+         goto <and>;
+
+      CF = CF || val;
+      CC = CC - 1;
+      if (CC >= 0x15)
+         goto <end>;
+      CC = 0;
+      goto <end>;
+
+      <and>
+      CF = CF && val;
+      CC = CC - 1;
+      goto <end>;
+
+      <single>
+      local tmp:1 = val;
+      CF = tmp;
+
+      <end>
+}
+
+macro setCondResult2(val,not) {
+      val = (val & !not) | (!val & not);
+      if (CC == 0)
+	 goto <single>;
+
+      if (CC < 9)
+	 goto <and>;
+
+      CF = CF || val;
+      CC = CC - 1;
+      if (CC >= 0x15)
+	 goto <end>;
+      CC = 0;
+      goto <end>;
+
+      <and>
+      CF = CF && val;
+      CC = CC - 1;
+      goto <end>;
+
+      <single>
+      local tmp:1 = val;
+      CF = tmp;
+
+      <end>
+}
+
+
+
+jmpdest: off is off { local tmp:4 = off; tmp = tmp + 8; export tmp; }
+#jmpdest2: arg is arg { local tmp:4 = (arg < 0) * arg + (arg s> 0) * (0x00f3b28 + arg); tmp = tmp + 8; export *[ram]:4 tmp; }
+
+imm: arg imm is offset > 0; arg; imm [offset = offset - 1;] {}
+imm: is offset = 0 {}
+
+:GOTO jmpdest is opcode = 2; jmpdest {
+  CC = 0;
+  CF = 0;
+  goto [jmpdest];
+}
+:NOP is opcode = 0 {
+}
+
+define pcodeop ANDOR;
+:ANDOR arg1 is opcode=0x0078;arg1 {
+ if (arg1 < 9) goto <and>;
+ CF = 0;
+ goto <ccset>;
+ <and>
+ CF = 1;
+ <ccset>
+ CC = arg1;
+}
+
+
+:LAUNCH_MISSION jmpdest is opcode=0x0079;jmpdest {
+ call [jmpdest];
+}
+define pcodeop TERMINATE_THIS_SCRIPT;
+:TERMINATE_THIS_SCRIPT  is opcode=0x0023 {
+ TERMINATE_THIS_SCRIPT();
+ return [0:4];
+}
+
+:GOTO_IF_TRUE jmpdest is opcode=0x0021;jmpdest {
+    if (!CF) goto <end>;
+    CC = 0;
+    CF = 0;
+    goto [jmpdest];
+    <end>
+}
+
+:GOTO_IF_FALSE jmpdest is opcode=0x0022;jmpdest {
+    if (CF) goto <end>;
+    CC = 0;
+    CF = 0;
+    goto [jmpdest];
+    <end>
+}
+
+:IS_INT_ANY_EQUAL_TO_NUMBER not arg1 arg2 is (opcode=0x001B | opcode=0x001c | opcode=0x02db) & not;arg1;arg2 {
+ setCondResult(arg1 == arg2,not);
+}
+
+define pcodeop SET_ANY_INT_TO_ANY_INT;
+:SET_ANYTHING_TO_ANYTHING ptr1 arg2 is (opcode=0x0035|opcode=0x0004|opcode=0x0005);ptr1;arg2 {
+ *:4 ptr1 = arg2;
+}
+
+define pcodeop IS_NUMBER_GREATER_THAN_INT_ANY;
+:IS_NUMBER_GREATER_THAN_INT_ANY not arg1 arg2 is not & opcode=0x0010;arg1;arg2 {
+ setCondResult(arg1 s> arg2, not);
+}
+
+define pcodeop START_NEW_SCRIPT;
+:START_NEW_SCRIPT jmpdest arg_list is opcode=0x0024; jmpdest; arg_list {
+   START_NEW_SCRIPT(*:4 jmpdest);
+}
+
+define pcodeop GOSUB_FILE;
+:GOSUB_FILE jmpdest arg2 is opcode=0x01BA;jmpdest;arg2 {
+ call [jmpdest];
+}
+
+define pcodeop GOSUB;
+:GOSUB jmpdest is opcode=0x0025;jmpdest {
+ call [jmpdest];
+}
+
+:RETURN  is opcode=0x0026 {
+ return [0:4];
+}
+
+:CALL imm8 imm8_2 imm8_3 jmpdest params_list is opcode=0x37b ... | opcode=0x37a; imm8; imm8_2; imm8_3; jmpdest; params_list [num_args = imm8 + imm8_2;] {
+  call [jmpdest];
+  SP = SP - (imm8 + imm8_2) * 4;
+}
+
+:ADD_INT_ANY_TO_INT_ANY ptr1 arg2 is opcode=0x0029 ... | opcode=0x0007;ptr1;arg2 {
+ *:4 ptr1 = *:4 ptr1 + arg2;
+}
+
+:IS_INT_ANY_GREATER_OR_EQUAL_TO_NUMBER not arg1 arg2 is not & opcode=0x0015;arg1;arg2 {
+ setCondResult(arg1 s>= arg2,not);
+}
+
+:IS_INT_ANY_GREATER_THAN_NUMBER not arg1 arg2 is (not & opcode=0x000F | opcode=0x0011);arg1;arg2 {
+ setCondResult(arg1 s> arg2,not);
+}
+
+:RETURN_TRUE  is opcode=0x005E {
+ CF = 1;
+ return [0:4];
+}
+
+:RETURN_FALSE  is opcode=0x005F {
+ CF = 0;
+ return [0:4];
+}
+
+# define pcodeop o_SCRIPT_NAME;
+# :SCRIPT_NAME arg1 is opcode=0x238; arg1 {
+#     o_SCRIPT_NAME (arg1);
+# }
+
+# :instr opcode arg1 is opcode; arg1 {
+#   goto [arg1];
+# }
+
+@include "generated.sinc"

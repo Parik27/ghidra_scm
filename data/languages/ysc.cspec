@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<compiler_spec>
+    <data_organization>
+	<pointer_size value="4" />
+        <wchar_size value="4" />
+        <short_size value="4" />
+        <integer_size value="4" />
+        <long_size value="4" />
+        <long_long_size value="4" />
+        <float_size value="4" />
+        <double_size value="4" />
+    </data_organization>
+    <global>
+        <range space="ram"/>
+    </global>
+    <readonly>
+        <register name="STRO"/>
+    </readonly>
+    <context_data>
+           <tracked_set space="ram">
+               <set name="STRO" val="0"/>
+               <set name="CC" val="0"/>
+               <set name="CF" val="0"/>
+           </tracked_set>
+    </context_data>
+    <stackpointer register="SP" space="ram"/>
+    <!-- <callotherfixup targetop="storeCondResult"> -->
+    <!--     <pcode> -->
+    <!--         <input name="val" size="1"/> -->
+    <!--         <body><![CDATA[ -->
+    <!--         if (CC == 0) -->
+    <!--   	       goto <single>; -->
+
+    <!--         if (CC < 9) -->
+    <!--   	       goto <and>; -->
+
+    <!--         CF = CF || val; -->
+    <!--         CC = CC - 1; -->
+    <!--         if (CC >= 0x15) -->
+    <!--   	       goto <end>; -->
+    <!--         CC = 0; -->
+    <!--         goto <end>; -->
+
+    <!--         <and> -->
+    <!--         CF = CF && val; -->
+    <!--         CC = CC - 1; -->
+    <!--         goto <end>; -->
+
+    <!--         <single> -->
+    <!--         CF = val; -->
+
+    <!--         <end> -->
+    <!--         ]]></body> -->
+    <!--     </pcode> -->
+    <!-- </callotherfixup> -->
+    <returnaddress>
+        <varnode space="stack" offset="0" size="4"/>
+    </returnaddress>
+    <default_proto>
+        <prototype name="default" extrapop="unknown" stackshift="4">
+            <input>
+            	<pentry minsize="1" maxsize="4">
+            	    <addr offset="0" space="stack"/>
+            	</pentry>
+                <pentry minsize="1" maxsize="4">
+            	    <addr offset="-4" space="stack"/>
+            	</pentry>
+                <pentry minsize="1" maxsize="4">
+            	    <addr offset="-8" space="stack"/>
+            	</pentry>
+                <pentry minsize="1" maxsize="4">
+            	    <addr offset="-12" space="stack"/>
+            	</pentry>
+                <pentry minsize="1" maxsize="4">
+            	    <addr offset="-16" space="stack"/>
+            	</pentry>
+                <pentry minsize="1" maxsize="4">
+            	    <addr offset="-20" space="stack"/>
+            	</pentry>
+                <pentry minsize="1" maxsize="4">
+            	    <addr offset="-24" space="stack"/>
+            	</pentry>
+                <pentry minsize="1" maxsize="4">
+            	    <addr offset="-28" space="stack"/>
+            	</pentry>
+                <pentry minsize="1" maxsize="4">
+            	    <addr offset="-32" space="stack"/>
+            	</pentry>
+                <pentry minsize="1" maxsize="4">
+            	    <addr offset="-36" space="stack"/>
+            	</pentry>
+                <pentry minsize="1" maxsize="4">
+            	    <addr offset="-40" space="stack"/>
+            	</pentry>
+                <pentry minsize="1" maxsize="4">
+            	    <addr offset="-44" space="stack"/>
+            	</pentry>
+                <pentry minsize="1" maxsize="4">
+            	    <addr offset="-48" space="stack"/>
+            	</pentry>
+                <pentry minsize="1" maxsize="4">
+            	    <addr offset="-52" space="stack"/>
+            	</pentry>
+                <pentry minsize="1" maxsize="4">
+            	    <addr offset="-56" space="stack"/>
+            	</pentry>
+            </input>
+            <output>
+            	<pentry minsize="1" maxsize="1">
+                    <register name="CF"/>
+                </pentry>
+            </output>
+            <unaffected>
+                <register name="CC"/>
+                <register name="SP"/>
+                <register name="FP"/>
+                <register name="NO"/>
+                <register name="STRO"/>
+                <register name="STO"/>
+                <register name="GLO"/>
+            </unaffected>
+        </prototype>
+    </default_proto>
+    
+</compiler_spec>

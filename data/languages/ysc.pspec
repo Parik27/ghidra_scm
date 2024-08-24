@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<processor_spec>
+	<programcounter register="IP"/>
+	<default_symbols>
+		<symbol name="main" address="ram:0x0008" type="code" entry="true"/>
+	</default_symbols>
+	<register_data>
+		<register name="RV"/>
+		<register name="CF" hidden="true"/>
+		<register name="CC" hidden="true"/>
+		<register name="NO" hidden="false"/>
+		<register name="GLO" hidden="true"/>
+		<register name="STRO" hidden="true"/>
+		<register name="STO" hidden="true"/>
+	</register_data>
+</processor_spec>

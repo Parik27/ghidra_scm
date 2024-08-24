@@ -1,0 +1,5 @@
+<opinions>
+<constraint loader="SCM Script Loader" compilerSpecId="default">
+	<constraint processor="scm"  size="32" variant="default" />
+</constraint>
+</opinions>
